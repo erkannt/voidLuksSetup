@@ -6,12 +6,12 @@
 
 efi_part_size="260M"		#Minimum of 100M, Arch wiki recommends at least 260M (as of 24-Mar-2021)
 
-root_part_size="20G"		#Size of the root partition. Required size depends on how much software you ultimately install
+root_part_size=""		#Size of the root partition. Required size depends on how much software you ultimately install
 				#If you run this install script without modifying the apps to be installed (including KDE graphical DE), about 4-5G is used
 				#Arch wiki recommends 15-20G (as of 24-Mar-2021)
 				#Alternatively, leave blank to omit creating a separate home partition, and have root occupy the entire drive
 				
-swap_size=""			#If you want to use suspend-to-disk (AKA hibernate), should be >= amount of RAM (some recommend 2x RAM if you have <8GB).
+swap_size="16G"			#If you want to use suspend-to-disk (AKA hibernate), should be >= amount of RAM (some recommend 2x RAM if you have <8GB).
 				#Otherwise, how much swap space (if any) is needed is debatable, rule of thumb I use is equal to square root of RAM (rounded up to whole GB)
 
 username="user"			#Desired username for regular (non-root) user of the Void installation you're making
@@ -20,13 +20,13 @@ hostname="desktop"		#Desired name to be used for the hostname of the Void instal
 
 fs_type="ext4"			#Desired filesystem to be used for the root and home partitions
 
-libc="musl" 			#"musl" for musl, "" for glibc.
+libc="" 			#"musl" for musl, "" for glibc.
 
 language="en_US.UTF-8"
 
 vendor_cpu="intel"		#Enter either "amd" or "intel" (all lowercase). This script assumes you're installing on an x86_64 system
 
-vendor_gpu="amd"		#Enter either "amd", "intel", or "nvidia" (all lowercase)
+vendor_gpu="intel"		#Enter either "amd", "intel", or "nvidia" (all lowercase)
 				#For AMD will install the OpenGL and Vulkan driver (mesa, not amdvlk), as well as the video acceration drivers.
 				#For Intel this installs OpenGL and Vulkan drivers, and video acceleration drivers
 				#For Nvidia this installs the proprietary driver. It assumes you're using a non-legacy GPU, which generally means any Geforce 600 or newer GTX card (some of the low end GT cards from 600, 700, and 800 series are legacy) 
@@ -35,7 +35,7 @@ discards="rd.luks.allow-discards"	#If you're installing on an SSD and you want d
 					#Otherwise, leave blank (just double quotes, "")
 					#Note that there privacy/security considerations to enabling TRIM with LUKS: https://wiki.archlinux.org/index.php/Dm-crypt/Specialties#Discard/TRIM_support_for_solid_state_drives_(SSD)
 
-graphical_de="kde"		#"xfce" for an XFCE4 (xorg) install
+graphical_de="xfce"		#"xfce" for an XFCE4 (xorg) install
                         	#Or "kde" for a KDE Plasma 5 (wayland) install. Somewhat reduced install compared to the full 'kde5' meta-package. Uses a console-based display manager (emptty) rather than SDDM (as this would require Xorg).
                         	#Or leave blank (just double quotes, "") to not install DE. Will skip graphics driver installation as well
 
@@ -48,11 +48,11 @@ void_repo="https://alpha.de.repo.voidlinux.org/"	#List of mirrors can be found h
 #These can be edited prior to running the script, but you can also easily install (and uninstall) packages, and enable/disable services, once you're up and running.
 
 #If apparmor is included here, the script will also add the apparmor security modules to the GRUB command line parameters
-apps="xorg-minimal xorg-fonts nano elogind dbus apparmor ufw cronie ntp firefox xdg-desktop-portal xdg-user-dirs xdg-utils" #flatpak alsa-utils gufw rclone RcloneBrowser chromium libreoffice-calc libreoffice-writer
+apps="xorg-minimal xorg-fonts vim elogind dbus apparmor ufw cronie ntp firefox xdg-desktop-portal xdg-user-dirs xdg-utils" #flatpak alsa-utils gufw rclone RcloneBrowser chromium libreoffice-calc libreoffice-writer
 
 #elogind and acpid should not both be enabled. Same with dhcpcd and NetworkManager.
-rm_services=("agetty-tty2" "agetty-tty3" "agetty-tty4" "agetty-tty5" "agetty-tty6" "mdadm" "sshd" "acpid" "dhcpcd") 
-en_services=("dbus" "elogind" "NetworkManager" "ufw" "cronie" "ntpd" "udevd" "uuidd")
+rm_services=("agetty-tty2" "agetty-tty3" "agetty-tty4" "agetty-tty5" "agetty-tty6" "mdadm" "sshd" "acpid") 
+en_services=("dbus" "elogind" "ufw" "cronie" "ntpd" "udevd" "uuidd")
 	
 #Being part of the wheel group allows use of sudo so you'll be able to add yourself to more groups in the future without having to login as root
 #Some additional groups you may way to add to the above list (separate with commas, no spaces): floppy,cdrom,optical,audio,video,kvm,xbuilder
@@ -199,10 +199,9 @@ chroot /mnt chmod 755 /
 #Create non-root user and add them to group(s)
 chroot /mnt useradd $username
 chroot /mnt usermod -aG $user_groups $username
-#Use the "HereDoc" to send a sequence of commands into chroot, allowing the root and non-root user passwords in the chroot to be set non-interactively
 cat << EOF | chroot /mnt
-echo "$root_pw\n$root_pw" | passwd -q root
-echo "$user_pw\n$user_pw" | passwd -q $username
+echo "root:$root_pw" | chpasswd
+echo "$username:$user_pw" | chpasswd
 EOF
 
 #Set hostname and language/locale
